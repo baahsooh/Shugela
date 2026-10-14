@@ -34,6 +34,7 @@ import type { GlucoseUnit, ThemePreference } from "@/lib/types";
 import { AccountCard } from "./account-card";
 import { TargetRangeEditor } from "./target-range-editor";
 import { TrashCard } from "./trash-card";
+import { MedicationsCard } from "./medications-card";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -124,6 +125,7 @@ export default function SettingsPage() {
 
       <PageBody>
         <TrashCard />
+        <MedicationsCard />
         <AccountCard />
 
         <Card>

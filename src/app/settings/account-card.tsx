@@ -93,7 +93,7 @@ export function AccountCard() {
       if (result) {
         toast({
           title: "Synced",
-          description: `${result.pushed} sent · ${result.pulled} received · ${result.deleted} removed`,
+          description: `${result.pushed} glucose sent · ${result.extras} meals & pills · ${result.pulled} received`,
         });
       } else if (sync.status === "error") {
         toast({ title: "Sync failed", description: sync.error ?? undefined, tone: "error" });

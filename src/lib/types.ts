@@ -34,7 +34,79 @@ export type MeasurementIconKey =
   | "evening"
   | "moon";
 
+/** Breakfast / lunch / supper plus the between-meals snack. */
+export type MealType = "breakfast" | "lunch" | "supper" | "snack";
+
 export type ReadingSource = "manual";
+
+export type DoseStatus = "taken" | "skipped";
+
+/* ------------------------------------------------------------ food & pills --- */
+
+export interface MealItem {
+  /** Catalogue id (`brown-rice`) or a custom-food id. */
+  foodId: string;
+  name: string;
+  /** Carbs per serving, in grams. */
+  carbsPerServing: number;
+  servings: number;
+}
+
+export interface Meal {
+  id: string;
+  mealType: MealType;
+  eatenAt: string;
+  items: MealItem[];
+  /** Total carbs in grams — derived, stored so day totals stay cheap. */
+  carbsG: number;
+  note?: string;
+  userId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A food the user added themselves, kept alongside the built-in catalogue. */
+export interface CustomFood {
+  id: string;
+  name: string;
+  carbsPerServing: number;
+  servingLabel: string;
+  category?: string;
+  createdAt: string;
+}
+
+export interface Medication {
+  id: string;
+  name: string;
+  /** e.g. "500 mg", "10 units". */
+  dose?: string;
+  /** Scheduled times of day, "HH:MM", sorted. */
+  schedule: string[];
+  active: boolean;
+  userId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DoseLog {
+  id: string;
+  medicationId: string;
+  /** Denormalised so the log still reads well if a medicine is renamed. */
+  medicationName: string;
+  /** The scheduled slot this dose belongs to, "HH:MM". */
+  scheduledTime: string;
+  takenAt: string;
+  status: DoseStatus;
+  note?: string;
+  userId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Stable key for one scheduled slot on one day. */
+export function doseSlotKey(medicationId: string, scheduledTime: string, dayKey: string): string {
+  return `${medicationId}|${scheduledTime}|${dayKey}`;
+}
 
 export interface GlucoseReading {
   /** Stable client generated id (uuid). */

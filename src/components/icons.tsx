@@ -239,3 +239,46 @@ export function SignOutIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** Magnifier — search. */
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="10.8" cy="10.8" r="6.4" />
+      <path d="m15.6 15.6 4 4" />
+    </Icon>
+  );
+}
+
+/** A capsule — medication. */
+export function PillIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8.2 4.9 4.9 8.2a4.7 4.7 0 0 0 6.6 6.6l3.3-3.3a4.7 4.7 0 0 0-6.6-6.6Z" />
+      <path d="M7 13.4 13.4 7" />
+      <path d="M16.4 12.6h4.2M18.5 10.5v4.2" />
+    </Icon>
+  );
+}
+
+/** A plate and cutlery — a meal. */
+export function MealIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11.4" cy="11.4" r="6.9" />
+      <circle cx="11.4" cy="11.4" r="3.1" />
+      <path d="M17.6 5.2v5.2M20.2 5.2v5.2M17.6 8.4h2.6M17.6 10.4V19" />
+    </Icon>
+  );
+}
+
+/** Calendar with a tick — adherence history. */
+export function CalendarCheckIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.6" y="5.4" width="16.8" height="15" rx="2.2" />
+      <path d="M3.6 10h16.8M8.4 3.4v3.4M15.6 3.4v3.4" />
+      <path d="M8.8 15.2 11 17.4l4-4.2" />
+    </Icon>
+  );
+}

@@ -81,7 +81,7 @@ shugela/
 │   ├── sw.js                     # offline app-shell service worker
 │   └── icons/                    # generated PWA icons (192/512/maskable/apple)
 ├── supabase/
-│   └── migrations/0001_init.sql  # schema + Row Level Security policies
+│   └── migrations/                 # 0001 init, 0002 pre-meal types, 0003 meals + pills
 ├── scripts/
 │   ├── generate-icons.mjs        # dependency-free PNG icon generator
 │   └── check-unused-exports.mjs  # dev helper
@@ -95,6 +95,8 @@ shugela/
 │   │   ├── history/page.tsx      # History
 │   │   ├── trends/page.tsx       # Trends
 │   │   ├── sign-in/page.tsx      # Magic-link sign in
+    │   │   ├── pills/page.tsx        # Today's dose checklist + adherence
+    │   │   ├── log/meal/page.tsx     # Meal and carb logging
 │   │   ├── settings/
 │   │   │   ├── page.tsx          # Settings
 │   │   │   ├── account-card.tsx  # Cloud backup / sync status
@@ -109,15 +111,18 @@ shugela/
 │   │   ├── ui/                   # button, card, badge, stat-tile, dialog, …
 │   │   └── icons.tsx             # inline SVG icon set (no icon dependency)
 │   ├── db/
-│   │   ├── db.ts                 # Dexie schema (v1 → v2 for cloud sync)
-│   │   ├── readings.ts           # CRUD repository
-│   │   ├── settings.ts           # settings repository
-│   │   └── seed.ts               # deterministic demo data
-│   ├── hooks/                    # use-auth, use-sync, use-readings, use-settings, …
-│   └── lib/
-│       ├── types.ts              # domain types
-│       ├── constants.ts          # measurement types, labels, defaults
-│       ├── glucose.ts            # conversion, parsing, validation, classification
+    │   │   ├── db.ts                 # Dexie schema (v1 → v4: sync, trash, meals, pills)
+    │   │   ├── meals.ts             # meal + custom food repository
+    │   │   ├── medications.ts       # schedule + dose log repository
+    │   │   ├── readings.ts           # CRUD repository
+    │   │   ├── settings.ts           # settings repository
+    │   │   └── seed.ts               # deterministic demo data
+    │   ├── hooks/                    # use-auth, use-sync, use-readings, use-settings, …
+    │   └── lib/
+    │       ├── types.ts              # domain types
+    │       ├── constants.ts          # measurement types, labels, meal types, defaults
+    │       ├── foods.ts              # curated carbohydrate catalogue
+    │       ├── glucose.ts            # conversion, parsing, validation, classification
 │       ├── trends.ts             # windows, daily series, stats, summaries
 │       ├── dates.ts              # local-time date helpers
 │       ├── validation.ts         # Zod schemas
@@ -267,7 +272,61 @@ Every screen renders an explicit empty state when there is no data.
 
 ---
 
-## 8. Reusable components
+## 8. Logging glucose, pills and meals
+
+The centre button is a **chooser**, not a direct link — tap it and pick what you
+are logging.
+
+### Measurement types
+
+Seven moments across the day, each with its own icon:
+
+| Type | Icon | Typical target (mmol/L) |
+| --- | --- | --- |
+| Wake up | sun | 3.9 – 6.1 |
+| Before breakfast | sunrise | 3.9 – 6.1 |
+| 2h after breakfast | toast | 4.4 – 8.0 |
+| Before lunch | noon clock | 4.0 – 7.0 |
+| 2h after lunch | bowl | 4.4 – 8.0 |
+| Before supper | evening clock | 4.0 – 7.0 |
+| 2h after supper | moon | 4.4 – 8.0 |
+
+Targets are defaults for colour-coding only — change any of them in Settings →
+Target ranges, which now has a chip row for all seven.
+
+### Meals and carbs
+
+`Log a meal` → pick breakfast / lunch / supper / snack → search the food list →
+tap to add, adjust servings. Total carbs is kept for you.
+
+The catalogue is deliberately small and local (`src/lib/foods.ts`): ~45 staples
+that South Africans actually eat, with carbs per realistic serving (pap, samp,
+boerewors, naartjie, bunny chow…). Anything missing is two taps away via
+**New food**, which stores your own entry alongside the built-ins. There is no
+external food database to query, and no per-serving ambiguity beyond the serving
+label shown in the list.
+
+### Pills
+
+Two layers, because they answer different questions:
+
+* **Schedule** (Settings → Medications) — each medicine has a name, an optional
+  dose and one or more times of day. Pause a medicine instead of deleting it.
+* **Dose log** (`/pills`) — every scheduled slot for today becomes a checklist
+  row. Tap to mark taken, *Skip* to record a deliberate miss, tap again to undo.
+  The header shows "2 of 4 taken today"; an **Adherence** card scores the last
+  seven days. Future slots today are excluded from the score, so tonight's
+  insulin cannot drag down this morning's number.
+
+Dose history survives removing a medicine, on purpose.
+
+### What syncs
+
+Glucose readings, meals, medications and dose logs all mirror to Supabase when
+you are signed in. The food catalogue is code, not data, so it is versioned
+through the repo and never uploaded.
+
+## 9. Reusable components
 
 `ui/` — `Button`, `Card`/`CardTitle`, `Badge`, `StatTile`, `EmptyState`,
 `SegmentedControl` (radio group), `ConfirmDialog` (native `<dialog>`, focus trap
@@ -296,7 +355,7 @@ min–max range, custom tooltip), `TypeAverageChart`, `TimeInRangeBar`,
 
 ---
 
-## 9. Offline & PWA
+## 10. Offline & PWA
 
 `public/sw.js` caches the app shell on install and then:
 
@@ -313,7 +372,7 @@ orientation, theme colour, icons (including a maskable one) and shortcuts to
 
 ---
 
-## 10. Cloud backup (Supabase)
+## 11. Cloud backup (Supabase)
 
 Shugela is **local-first**: Dexie/IndexedDB is what the UI renders from, so the app
 works with no network at all. Supabase is a *mirror* — it exists so clearing
@@ -379,7 +438,7 @@ to be public — it grants nothing without those policies.
 
 ---
 
-## 11. Deploying to Vercel
+## 12. Deploying to Vercel
 
 Vercel serves the app; it is not the database.
 
@@ -408,7 +467,7 @@ is also what makes the PWA install properly on a phone.
 
 ---
 
-## 12. Notes & limitations
+## 13. Notes & limitations
 
 * **Local-only by default.** Nothing leaves the device until you sign in, and
   Settings → Your data → *Export as JSON* still writes a portable backup.

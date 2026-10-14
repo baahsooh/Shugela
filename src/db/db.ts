@@ -1,6 +1,13 @@
 import Dexie, { type Table } from "dexie";
 
-import type { AppSettings, GlucoseReading } from "@/lib/types";
+import type {
+  AppSettings,
+  CustomFood,
+  DoseLog,
+  GlucoseReading,
+  Meal,
+  Medication,
+} from "@/lib/types";
 
 /**
  * Local-first database.
@@ -17,6 +24,10 @@ export class ShugelaDatabase extends Dexie {
   tombstones!: Table<Tombstone, string>;
   /** Soft-deleted readings, kept until the user purges them. */
   trash!: Table<TrashedReading, string>;
+  meals!: Table<Meal, string>;
+  customFoods!: Table<CustomFood, string>;
+  medications!: Table<Medication, string>;
+  doseLogs!: Table<DoseLog, string>;
 
   constructor() {
     super("shugela");
@@ -43,6 +54,18 @@ export class ShugelaDatabase extends Dexie {
       tombstones: "id, deletedAt",
       trash: "id, deletedAt",
     });
+
+    // v4 adds food tracking and the medication log.
+    this.version(4).stores({
+      readings: "id, measuredAt, measurementType, createdAt, userId, [measurementType+measuredAt]",
+      settings: "id",
+      tombstones: "id, deletedAt",
+      trash: "id, deletedAt",
+      meals: "id, eatenAt, mealType, userId",
+      customFoods: "id, name",
+      medications: "id, name, active",
+      doseLogs: "id, medicationId, takenAt, scheduledTime, userId, [medicationId+scheduledTime]",
+    });
   }
 }
 
@@ -51,6 +74,8 @@ export interface Tombstone {
   deletedAt: string;
   /** Account that owned the row; only that account replays the delete. */
   userId?: string;
+  /** What the id referred to, so pills/meals can be tombstoned too. */
+  kind?: "reading" | "meal" | "dose";
 }
 
 export interface TrashedReading {

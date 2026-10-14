@@ -1,8 +1,19 @@
 import { db } from "@/db/db";
 import { getAuthState } from "@/hooks/use-auth";
 import { toMmol } from "@/lib/glucose";
-import type { AppSettings, GlucoseReading, GlucoseUnit, MeasurementType, TargetRanges } from "@/lib/types";
+import type {
+  AppSettings,
+  DoseLog,
+  DoseStatus,
+  GlucoseReading,
+  GlucoseUnit,
+  Meal,
+  MeasurementType,
+  Medication,
+  TargetRanges,
+} from "@/lib/types";
 import { getSupabase } from "./client";
+import type { Table } from "dexie";
 
 /**
  * Cloud sync.
@@ -19,6 +30,8 @@ export interface SyncSummary {
   pushed: number;
   pulled: number;
   deleted: number;
+  /** Meals, medications and dose logs moved in either direction. */
+  extras: number;
 }
 
 const LAST_SYNC_KEY = "shugela:last-sync";
@@ -211,12 +224,13 @@ async function performSync(): Promise<SyncSummary | null> {
     const deleted = await replayDeletes(userId);
     const { pulled, toPush } = await pullAndMerge(userId);
     const pushed = await pushAll(toPush, userId);
+    const extras = await syncSupportingTables(userId);
     await syncProfile(userId);
 
     writeLastSync(userId);
     setStatus("idle");
 
-    return { pushed, pulled, deleted };
+    return { pushed, pulled, deleted, extras };
   } catch (error) {
     setStatus("error", error instanceof Error ? error.message : "Sync failed");
     return null;
@@ -346,6 +360,202 @@ async function syncProfile(userId: string): Promise<void> {
     { onConflict: "user_id" },
   );
   if (upsertError) throw new Error(upsertError.message);
+}
+
+/* --------------------------------------------------- meals, pills and doses --- */
+
+type Syncable = { id: string; userId?: string; updatedAt: string };
+
+interface SyncEntity<T> {
+  table: Table<T, string>;
+  remote: string;
+  columns: string;
+  toRow: (item: T, userId: string) => Record<string, unknown>;
+  fromRow: (row: Record<string, unknown>) => T;
+}
+
+const MEALS: SyncEntity<Meal> = {
+  table: db.meals,
+  remote: "meals",
+  columns: "id,user_id,meal_type,eaten_at,items,carbs_g,note,created_at,updated_at",
+  toRow: (meal, userId) => ({
+    id: meal.id,
+    user_id: userId,
+    meal_type: meal.mealType,
+    eaten_at: meal.eatenAt,
+    items: meal.items,
+    carbs_g: meal.carbsG,
+    note: meal.note ?? null,
+    created_at: meal.createdAt,
+    updated_at: meal.updatedAt,
+  }),
+  fromRow: (row) => {
+    const r = row as {
+      meal_type: Meal["mealType"];
+      eaten_at: string;
+      items?: Meal["items"];
+      carbs_g?: number | string;
+      note?: string | null;
+      user_id: string;
+      created_at: string;
+      updated_at: string;
+    };
+    return {
+      id: String(row.id),
+      mealType: r.meal_type,
+      eatenAt: new Date(r.eaten_at).toISOString(),
+      items: r.items ?? [],
+      carbsG: Number(r.carbs_g ?? 0),
+      ...(r.note ? { note: r.note } : {}),
+      userId: r.user_id,
+      createdAt: new Date(r.created_at).toISOString(),
+      updatedAt: new Date(r.updated_at).toISOString(),
+    };
+  },
+};
+
+const MEDICATIONS: SyncEntity<Medication> = {
+  table: db.medications,
+  remote: "medications",
+  columns: "id,user_id,name,dose,schedule,active,created_at,updated_at",
+  toRow: (medication, userId) => ({
+    id: medication.id,
+    user_id: userId,
+    name: medication.name,
+    dose: medication.dose ?? null,
+    schedule: medication.schedule,
+    active: medication.active,
+    created_at: medication.createdAt,
+    updated_at: medication.updatedAt,
+  }),
+  fromRow: (row) => {
+    const r = row as {
+      name: string;
+      dose?: string | null;
+      schedule?: Medication["schedule"];
+      active: boolean;
+      user_id: string;
+      created_at: string;
+      updated_at: string;
+    };
+    return {
+      id: String(row.id),
+      name: r.name,
+      ...(r.dose ? { dose: r.dose } : {}),
+      schedule: r.schedule ?? [],
+      active: r.active,
+      userId: r.user_id,
+      createdAt: new Date(r.created_at).toISOString(),
+      updatedAt: new Date(r.updated_at).toISOString(),
+    };
+  },
+};
+
+const DOSE_LOGS: SyncEntity<DoseLog> = {
+  table: db.doseLogs,
+  remote: "dose_logs",
+  columns:
+    "id,user_id,medication_id,medication_name,scheduled_time,taken_at,status,note,created_at,updated_at",
+  toRow: (log, userId) => ({
+    id: log.id,
+    user_id: userId,
+    medication_id: log.medicationId,
+    medication_name: log.medicationName,
+    scheduled_time: log.scheduledTime,
+    taken_at: log.takenAt,
+    status: log.status,
+    note: log.note ?? null,
+    created_at: log.createdAt,
+    updated_at: log.updatedAt,
+  }),
+  fromRow: (row) => {
+    const r = row as {
+      medication_id: string;
+      medication_name: string;
+      scheduled_time: string;
+      taken_at: string;
+      status: DoseStatus;
+      note?: string | null;
+      user_id: string;
+      created_at: string;
+      updated_at: string;
+    };
+    return {
+      id: String(row.id),
+      medicationId: r.medication_id,
+      medicationName: r.medication_name,
+      scheduledTime: r.scheduled_time,
+      takenAt: new Date(r.taken_at).toISOString(),
+      status: r.status,
+      ...(r.note ? { note: r.note } : {}),
+      userId: r.user_id,
+      createdAt: new Date(r.created_at).toISOString(),
+      updatedAt: new Date(r.updated_at).toISOString(),
+    };
+  },
+};
+
+/** Meals, medications and dose logs follow the same merge rules as readings. */
+async function syncSupportingTables(userId: string): Promise<number> {
+  const since = readLastSync(userId);
+  let moved = 0;
+
+  moved += await syncEntity<Meal>(MEALS, userId, since);
+  moved += await syncEntity<Medication>(MEDICATIONS, userId, since);
+  moved += await syncEntity<DoseLog>(DOSE_LOGS, userId, since);
+
+  return moved;
+}
+
+async function syncEntity<T extends Syncable>(
+  entity: SyncEntity<T>,
+  userId: string,
+  since: string | null,
+): Promise<number> {
+  const supabase = getSupabase();
+  if (!supabase) return 0;
+
+  let query = supabase
+    .from(entity.remote)
+    .select(entity.columns)
+    .eq("user_id", userId)
+    .limit(REMOTE_READ_LIMIT);
+
+  if (since) query = query.gt("updated_at", since);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const remote = (data ?? []) as unknown as Record<string, unknown>[];
+  const local = await entity.table.toArray();
+  const localById = new Map(local.map((item) => [item.id, item]));
+
+  const incoming: T[] = [];
+  for (const row of remote) {
+    const next = entity.fromRow(row);
+    const current = localById.get(next.id);
+    if (!current || toTime(next.updatedAt) > toTime(current.updatedAt)) {
+      incoming.push(next);
+    }
+  }
+
+  if (incoming.length > 0) await entity.table.bulkPut(incoming);
+
+  const incomingIds = new Set(incoming.map((item) => item.id));
+  const toPush = local
+    .filter((item) => item.userId === userId)
+    .filter((item) => !incomingIds.has(item.id));
+
+  const CHUNK = 200;
+  for (let index = 0; index < toPush.length; index += CHUNK) {
+    const chunk = toPush.slice(index, index + CHUNK).map((item) => entity.toRow(item, userId));
+    const { error: upsertError } = await supabase
+      .from(entity.remote)
+      .upsert(chunk, { onConflict: "id" });
+    if (upsertError) throw new Error(upsertError.message);
+  }
+
+  return incoming.length + toPush.length;
 }
 
 /* -------------------------------------------------------------- uploads --- */
