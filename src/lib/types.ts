@@ -10,11 +10,29 @@
 
 export type GlucoseUnit = "mmol/L" | "mg/dL";
 
+/**
+ * The seven moments Shugela measures around a day's meals.
+ * `pre_*` is a fasting-ish reading taken just before eating, `post_*_2h` is the
+ * two-hour post-meal check that matters most for glucose.
+ */
 export type MeasurementType =
   | "wakeup"
+  | "pre_breakfast"
   | "post_breakfast_2h"
+  | "pre_lunch"
   | "post_lunch_2h"
+  | "pre_supper"
   | "post_supper_2h";
+
+/** Icon key resolved to a component in components/measurements/measurement-icon.tsx */
+export type MeasurementIconKey =
+  | "sun"
+  | "sunrise"
+  | "toast"
+  | "noon"
+  | "bowl"
+  | "evening"
+  | "moon";
 
 export type ReadingSource = "manual";
 

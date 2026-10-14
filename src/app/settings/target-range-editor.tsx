@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { ChipFilter } from "@/components/ui/chip-filter";
 import { useSettings } from "@/hooks/use-settings";
 import { MEASUREMENT_TYPES, MEASUREMENT_TYPE_META } from "@/lib/constants";
 import { fromMmol, toMmol } from "@/lib/glucose";
@@ -55,14 +55,13 @@ export function TargetRangeEditor() {
     <Card>
       <CardTitle>Target ranges</CardTitle>
 
-      <SegmentedControl<MeasurementType>
+      <ChipFilter<MeasurementType>
         label="Measurement"
-        size="sm"
         value={type}
         onChange={setType}
         options={MEASUREMENT_TYPES.map((value) => ({
           value,
-          label: MEASUREMENT_TYPE_META[value].short,
+          label: MEASUREMENT_TYPE_META[value].label,
         }))}
       />
 
@@ -100,7 +99,7 @@ export function TargetRangeEditor() {
         </div>
 
         <Button type="submit" variant="secondary" size="lg" fullWidth disabled={isSubmitting}>
-          {isSubmitting ? "Saving…" : `Save ${MEASUREMENT_TYPE_META[type].short.toLowerCase()} range`}
+          {isSubmitting ? "Saving…" : `Save ${MEASUREMENT_TYPE_META[type].label} range`}
         </Button>
       </form>
     </Card>

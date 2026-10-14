@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { GlucoseTrendChart } from "@/components/charts/glucose-trend-chart";
 import { DropletIcon, PlusIcon, TrendsIcon } from "@/components/icons";
+import { MeasurementIcon } from "@/components/measurements/measurement-icon";
 import { PageBody } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReadingRow } from "@/components/readings/reading-card";
@@ -20,7 +21,6 @@ import { MEASUREMENT_TYPES, MEASUREMENT_TYPE_META } from "@/lib/constants";
 import { dayKey, formatFullDateTime, greeting } from "@/lib/dates";
 import { classify, formatGlucose, statusLabel } from "@/lib/glucose";
 import { buildDaySeries, computeStats, filterByWindow, getTimeWindow } from "@/lib/trends";
-import { cn } from "@/lib/utils";
 import type { GlucoseReading, GlucoseUnit, MeasurementType, RangeStatus } from "@/lib/types";
 
 export default function HomePage() {
@@ -167,12 +167,7 @@ export default function HomePage() {
 
               <div className="-mx-1 flex flex-col divide-y divide-line">
                 {(todayReadings.length > 0 ? todayReadings : readings.slice(0, 5)).map((reading) => (
-                  <ReadingRow
-                    key={reading.id}
-                    reading={reading}
-                    unit={unit}
-                    targetRanges={targetRanges}
-                  />
+                  <ReadingRow key={reading.id} reading={reading} unit={unit} />
                 ))}
               </div>
             </Card>
@@ -234,12 +229,14 @@ function QuickLogButton({ type }: { type: MeasurementType }) {
   return (
     <Link
       href={`/log?type=${type}`}
-      className="flex min-h-20 flex-col justify-between rounded-3xl border border-line bg-surface p-3.5 shadow-card transition-colors active:bg-surface-muted"
+      className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface p-3 shadow-card transition-colors active:bg-surface-muted"
     >
-      <span className={cn("flex size-8 items-center justify-center rounded-xl bg-surface-muted", meta.accent)}>
-        <DropletIcon className="size-4" />
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-ink-soft">
+        <MeasurementIcon icon={meta.icon} className="size-5" />
       </span>
-      <span className="mt-2 text-sm font-semibold leading-tight text-ink">{meta.label}</span>
+      <span className="min-w-0 text-[0.8rem] font-semibold leading-tight text-ink">
+        {meta.label}
+      </span>
     </Link>
   );
 }

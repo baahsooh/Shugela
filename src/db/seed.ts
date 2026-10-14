@@ -39,8 +39,11 @@ interface Slot {
 
 const SLOTS: Slot[] = [
   { type: "wakeup", hour: 6, minute: 40, jitterMinutes: 25, base: 5.3, spread: 0.5, chance: 1 },
+  { type: "pre_breakfast", hour: 7, minute: 40, jitterMinutes: 15, base: 5.5, spread: 0.55, chance: 0.7 },
   { type: "post_breakfast_2h", hour: 9, minute: 15, jitterMinutes: 20, base: 6.8, spread: 0.95, chance: 0.94 },
+  { type: "pre_lunch", hour: 12, minute: 20, jitterMinutes: 20, base: 5.6, spread: 0.6, chance: 0.62 },
   { type: "post_lunch_2h", hour: 13, minute: 20, jitterMinutes: 25, base: 7.1, spread: 1.05, chance: 0.9 },
+  { type: "pre_supper", hour: 18, minute: 30, jitterMinutes: 25, base: 5.8, spread: 0.65, chance: 0.6 },
   { type: "post_supper_2h", hour: 20, minute: 5, jitterMinutes: 35, base: 7.5, spread: 1.1, chance: 0.82 },
 ];
 
@@ -95,6 +98,9 @@ export function buildDemoReadings({ days = 30, now = new Date() }: SeedOptions =
       if (slot.type === "wakeup" && dayIndex % 17 === 5) value = 3.3 + random() * 0.5;
       if (slot.type === "post_lunch_2h" && dayIndex % 19 === 9) value = 13.2 + random() * 2.4;
       if (slot.type === "post_supper_2h" && dayIndex % 23 === 11) value = 3.6 + random() * 0.6;
+      // Pre-meal readings drift with the meal that follows: a carb-heavy
+      // breakfast shows up as a higher "before breakfast" a while later.
+      if (slot.type === "pre_breakfast" && dayIndex % 11 === 4) value = 6.4 + random() * 0.6;
 
       const glucoseMmol = roundTo(Math.min(Math.max(value, 2.6), 22), 1);
 

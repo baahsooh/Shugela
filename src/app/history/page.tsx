@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ReadingCard } from "@/components/readings/reading-card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { ChipFilter } from "@/components/ui/chip-filter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReadings } from "@/hooks/use-readings";
 import { useSettings } from "@/hooks/use-settings";
@@ -22,7 +22,7 @@ type Filter = MeasurementType | "all";
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
-  ...MEASUREMENT_TYPES.map((type) => ({ value: type as Filter, label: MEASUREMENT_TYPE_META[type].short })),
+  ...MEASUREMENT_TYPES.map((type) => ({ value: type as Filter, label: MEASUREMENT_TYPE_META[type].label })),
 ];
 
 export default function HistoryPage() {
@@ -53,9 +53,8 @@ export default function HistoryPage() {
       />
 
       <PageBody>
-        <SegmentedControl<Filter>
+        <ChipFilter<Filter>
           label="Filter by measurement"
-          size="sm"
           value={filter}
           onChange={handleFilterChange}
           options={FILTERS}

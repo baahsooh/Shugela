@@ -1,49 +1,114 @@
-import type { GlucoseUnit, MeasurementType, TargetRanges } from "./types";
+import type { GlucoseUnit, MeasurementIconKey, MeasurementType, TargetRanges } from "./types";
 
 export const APP_NAME = "Shugela";
 export const APP_TAGLINE = "Blood glucose, logged locally";
 
 export const MEASUREMENT_TYPES = [
   "wakeup",
+  "pre_breakfast",
   "post_breakfast_2h",
+  "pre_lunch",
   "post_lunch_2h",
+  "pre_supper",
   "post_supper_2h",
 ] as const satisfies readonly MeasurementType[];
 
 export const MEASUREMENT_TYPE_META: Record<
   MeasurementType,
-  { label: string; short: string; hint: string; accent: string }
+  {
+    label: string;
+    short: string;
+    hint: string;
+    icon: MeasurementIconKey;
+    /** Filled when the reading belongs to a meal, used by the food log. */
+    meal?: MealType;
+    timing: "fasting" | "pre-meal" | "post-meal";
+  }
 > = {
   wakeup: {
     label: "Wake up",
     short: "Wake up",
-    hint: "Before breakfast, after waking",
-    accent: "text-ink-soft",
+    hint: "On waking, before anything to eat",
+    icon: "sun",
+    timing: "fasting",
+  },
+  pre_breakfast: {
+    label: "Before breakfast",
+    short: "Pre breakfast",
+    hint: "Just before your first meal",
+    icon: "sunrise",
+    timing: "pre-meal",
   },
   post_breakfast_2h: {
     label: "2h after breakfast",
-    short: "Breakfast",
+    short: "After breakfast",
     hint: "Two hours after your first meal",
-    accent: "text-ink-soft",
+    icon: "toast",
+    meal: "breakfast",
+    timing: "post-meal",
+  },
+  pre_lunch: {
+    label: "Before lunch",
+    short: "Pre lunch",
+    hint: "Just before lunch",
+    icon: "noon",
+    timing: "pre-meal",
   },
   post_lunch_2h: {
     label: "2h after lunch",
-    short: "Lunch",
+    short: "After lunch",
     hint: "Two hours after lunch",
-    accent: "text-ink-soft",
+    icon: "bowl",
+    meal: "lunch",
+    timing: "post-meal",
+  },
+  pre_supper: {
+    label: "Before supper",
+    short: "Pre supper",
+    hint: "Just before your evening meal",
+    icon: "evening",
+    timing: "pre-meal",
   },
   post_supper_2h: {
     label: "2h after supper",
-    short: "Supper",
+    short: "After supper",
     hint: "Two hours after your evening meal",
-    accent: "text-ink-soft",
+    icon: "moon",
+    meal: "supper",
+    timing: "post-meal",
   },
 };
 
+export type MealType = "breakfast" | "lunch" | "supper" | "snack";
+
+export const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "supper", "snack"];
+
+export const MEAL_TYPE_META: Record<MealType, { label: string; short: string; carbsHint: string }> = {
+  breakfast: { label: "Breakfast", short: "Breakfast", carbsHint: "Start of the day" },
+  lunch: { label: "Lunch", short: "Lunch", carbsHint: "Midday meal" },
+  supper: { label: "Supper", short: "Supper", carbsHint: "Evening meal" },
+  snack: { label: "Snack", short: "Snack", carbsHint: "Between meals" },
+};
+
+/** The measurement that belongs after each meal — used to attach carbs. */
+export const POST_MEAL_MEASUREMENT: Record<MealType, MeasurementType | null> = {
+  breakfast: "post_breakfast_2h",
+  lunch: "post_lunch_2h",
+  supper: "post_supper_2h",
+  snack: null,
+};
+
+/**
+ * Starting windows for the in-range badges. Pre-meal readings sit between the
+ * fasting and post-meal targets — adjust them in Settings to match your plan.
+ */
 export const DEFAULT_TARGET_RANGES: TargetRanges = {
   wakeup: { minMmol: 3.9, maxMmol: 6.1 },
+  pre_breakfast: { minMmol: 3.9, maxMmol: 6.1 },
   post_breakfast_2h: { minMmol: 4.4, maxMmol: 8 },
+  pre_lunch: { minMmol: 4.0, maxMmol: 7.0 },
   post_lunch_2h: { minMmol: 4.4, maxMmol: 8 },
+  pre_supper: { minMmol: 4.0, maxMmol: 7.0 },
   post_supper_2h: { minMmol: 4.4, maxMmol: 8 },
 };
 
@@ -76,4 +141,8 @@ export function isMeasurementType(value: unknown): value is MeasurementType {
 
 export function isGlucoseUnit(value: unknown): value is GlucoseUnit {
   return value === "mmol/L" || value === "mg/dL";
+}
+
+export function measurementLabel(type: MeasurementType): string {
+  return MEASUREMENT_TYPE_META[type]?.label ?? type;
 }
